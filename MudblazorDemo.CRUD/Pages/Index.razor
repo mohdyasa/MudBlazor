@@ -1,0 +1,118 @@
+﻿@page "/"
+
+@using MudblazorDemo.CRUD.Data
+@using MudblazorDemo.CRUD.Models
+@inject MudblazorDemo.CRUD.Services.IStudentService studentService
+@inject MudblazorDemo.CRUD.Services.ICountryService countryService
+@inject MudblazorDemo.CRUD.Services.IClassService classService
+
+@inject MudBlazor.ISnackbar snackBar
+
+<MudCard Elevation="25">
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">Add / Edit Student Data</MudText>
+        </CardHeaderContent>
+    </MudCardHeader>
+    <MudCardContent>
+        <MudTextField @bind-Value="student.Name" Required="true" RequiredError="Name is required!" Label="Name" Variant="Variant.Text" Margin="Margin.Normal"></MudTextField>
+        <MudSelect @bind-Value="student.ClassId" Label="Select Class" AnchorOrigin="Origin.BottomCenter">
+            @foreach (var clas in classes)
+            {
+                <MudSelectItem Value="@clas.Id">@clas.Name</MudSelectItem>
+            }
+        </MudSelect>
+        <MudSelect @bind-Value="student.CountryId" Label="Select Country" AnchorOrigin="Origin.BottomCenter">
+            @foreach (var country in countries)
+            {
+                <MudSelectItem Value="@country.Id">@country.Name</MudSelectItem>
+            }
+
+        </MudSelect>
+        <MudItem xs="12" sm="6" md="4">
+            <MudDatePicker DateFormat="dd/MM/yyyy" PickerVariant="PickerVariant.Dialog" Label="Select Date" Text="2010-10-19" />
+        </MudItem>
+        <br />
+        <MudButton Variant="Variant.Filled" Color="Color.Success" OnClick="Save">Save Customer</MudButton>
+    </MudCardContent>
+</MudCard>
+<br />
+<MudTable Elevation="25" Items="GetStudents().Result" Filter="new Func<Student, bool>(Search)" @bind-customer="student">
+    <ToolBarContent>
+        <MudText Typo="Typo.h6">Students List</MudText>
+        <MudSpacer />
+        <MudTextField @bind-Value="searchString" Placeholder="Search for Students..." Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+    </ToolBarContent>
+    <HeaderContent>
+        <MudTh>Id</MudTh>
+        <MudTh>Name</MudTh>
+        <MudTh>Class</MudTh>
+        <MudTh>Country</MudTh>
+        <MudTh>DateOfBirth</MudTh>
+
+        <MudTh>Actions</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Id">@context.Id</MudTd>
+        <MudTd DataLabel="Name">@context.Name</MudTd>
+        <MudTd DataLabel="Class">@context.Class.Name</MudTd>
+        <MudTd DataLabel="Country">@context.Country.Name</MudTd>
+        <MudTd DataLabel="Country">@context.DateOfBirth.Date</MudTd>
+
+        <MudTd DataLabel="">
+            <MudFab @onclick="@(()=>Edit(@context.Id))" Color="Color.Primary" Icon="@Icons.Material.Filled.Edit" Size="Size.Small" IconSize="Size.Small" />
+            <MudFab @onclick="@(()=>Delete(@context.Id))" Color="Color.Secondary" Icon="@Icons.Material.Filled.Delete" Size="Size.Small" IconSize="Size.Small" />
+        </MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    private bool hover = false;
+    private string searchString = "";
+    private Student student = new Student();
+    private List<Student> students = new List<Student>();
+    private IEnumerable<Country> countries = new List<Country>();
+    private IEnumerable<Class> classes = new List<Class>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetStudents();
+        countries = await countryService.GetCountryData();
+        classes = await classService.GetClasses();
+    }
+
+    private async Task<List<Student>> GetStudents()
+    {
+        students = await studentService.GetStudents();
+        return students;
+    }
+    private bool Search(Student customer)
+    {
+        if (string.IsNullOrWhiteSpace(searchString)) return true;
+        if (student.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase)
+            || student.Class.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase)
+            || student.Country.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+        return false;
+    }
+
+    private async void Save()
+    {
+        studentService.SaveStudent(student);
+        student = new Student();
+        snackBar.Add("Data Saved.", Severity.Success);
+        await GetStudents();
+    }
+    private void Edit(int id)
+    {
+        student = students.FirstOrDefault(c => c.Id == id);
+    }
+    private async void Delete(int id)
+    {
+        studentService.DeleteStudent(id);
+        snackBar.Add("Customer Deleted.", Severity.Success);
+        await GetStudents();
+    }
+}
